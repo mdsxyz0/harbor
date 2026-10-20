@@ -358,11 +358,12 @@ export function TogetherRelayPanel({
             wide
             icon={<PublicRelayMark />}
             label={t("Harbor's public relay")}
-            desc={t("A relay we run. Nothing to set up, and it stays current on its own.")}
+            desc={HARBOR_PUBLIC_RELAY ? t("A relay we run. Nothing to set up, and it stays current on its own.") : t("The public relay is not available in this build. Use your own relay instead.")}
             tip={t("Hit your daily quota? Use Harbor's public relay, or host your own.")}
           >
             <button
               onClick={() => update({ togetherRelayUrl: HARBOR_PUBLIC_RELAY })}
+              disabled={!HARBOR_PUBLIC_RELAY}
               className={ROW_ACTION}
             >
               <Relay size={16} strokeWidth={1.9} />

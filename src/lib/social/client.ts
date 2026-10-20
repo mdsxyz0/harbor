@@ -1,6 +1,7 @@
 import { authenticatedFetch } from "@/lib/account/authenticated-fetch";
 import { captureSessionScope } from "@/lib/theme-auth";
-import { HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { HARBOR_API_BASE, HARBOR_SOCIAL_ENABLED } from "@/lib/config/endpoints";
+import { serviceNotConfiguredError } from "@/lib/config/owned-services";
 
 const API = `${HARBOR_API_BASE}/themes/api`;
 
@@ -24,12 +25,14 @@ async function unwrap<T>(r: Response, isCurrent: () => boolean): Promise<T> {
 }
 
 export async function socialGet<T>(path: string, signal?: AbortSignal): Promise<T> {
+  if (!HARBOR_SOCIAL_ENABLED) throw serviceNotConfiguredError("social");
   const isCurrent = captureSessionScope();
   const r = await authenticatedFetch(`${API}${path}`, { headers: headers(false), signal }, fetch);
   return unwrap<T>(r, isCurrent);
 }
 
 export async function socialPost<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+  if (!HARBOR_SOCIAL_ENABLED) throw serviceNotConfiguredError("social");
   const isCurrent = captureSessionScope();
   const r = await authenticatedFetch(
     `${API}${path}`,
@@ -44,6 +47,7 @@ export async function socialPost<T>(path: string, body?: Record<string, unknown>
 }
 
 export async function socialDelete<T>(path: string): Promise<T> {
+  if (!HARBOR_SOCIAL_ENABLED) throw serviceNotConfiguredError("social");
   const isCurrent = captureSessionScope();
   const r = await authenticatedFetch(
     `${API}${path}`,
@@ -54,6 +58,7 @@ export async function socialDelete<T>(path: string): Promise<T> {
 }
 
 export async function socialPatch<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+  if (!HARBOR_SOCIAL_ENABLED) throw serviceNotConfiguredError("social");
   const isCurrent = captureSessionScope();
   const r = await authenticatedFetch(
     `${API}${path}`,

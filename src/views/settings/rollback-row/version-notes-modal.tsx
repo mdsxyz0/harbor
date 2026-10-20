@@ -12,7 +12,7 @@ import { ROW_DESC } from "../kit";
 import { SButton } from "../ui";
 import { VERSION_BADGE } from "./badge";
 
-const RELEASES_URL = "https://github.com/harborstremio/harbor/releases";
+const RELEASES_URL = "https://github.com/mdsxyz0/harbor/releases";
 
 export function VersionNotesModal({
   entry,

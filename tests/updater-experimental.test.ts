@@ -157,7 +157,7 @@ function deferred<T>() {
 }
 
 function harness(
-  options: { beta?: boolean; managed?: boolean; platform?: string; version?: string; dev?: boolean } = {},
+  options: { beta?: boolean; managed?: boolean; platform?: string; version?: string; dev?: boolean; updatesEnabled?: boolean } = {},
 ) {
   const localStorage = storage();
   localStorage.setItem("harbor.settings", JSON.stringify({ betaUpdates: !!options.beta }));
@@ -291,7 +291,12 @@ function harness(
           };
         },
       },
-      "@/lib/config/endpoints": { HARBOR_API_BASE: "https://example.test" },
+      "@/lib/config/endpoints": {
+        HARBOR_API_BASE: "https://example.test",
+        HARBOR_UPDATES_BASE: "https://example.test",
+        HARBOR_UPDATES_ENABLED: options.updatesEnabled ?? true,
+        HARBOR_DOWNLOAD_URL: "https://github.com/mdsxyz0/harbor/actions/workflows/app-build.yml",
+      },
       "@/lib/i18n": { t: (s: string) => s },
       "./channel": channel,
       "./experimental": experimental,
@@ -357,6 +362,23 @@ function harness(
   return { updater, channel, betaReturn, localStorage, recovery, config, calls };
 }
 
+test("unconfigured owned updates perform no checks or installation and offer our download page", async () => {
+  const h = harness({ updatesEnabled: false });
+  h.updater.startUpdateWatcher();
+  await h.updater.checkForUpdate(true);
+  await h.updater.prepareBetaReturn("0.9.122");
+  await h.updater.downloadUpdate();
+  await h.updater.installUpdate();
+  assert.equal(h.calls.headers.length, 0);
+  assert.equal(h.calls.fetchUrls.length, 0);
+  assert.equal(h.calls.nativeFetchUrls.length, 0);
+  assert.equal(h.calls.download, 0);
+  assert.equal(h.calls.install, 0);
+  assert.equal(h.calls.launch, 0);
+  await h.updater.openManualDownload();
+  assert.deepEqual(h.calls.manualUrls, ["https://github.com/mdsxyz0/harbor/actions/workflows/app-build.yml"]);
+});
+
 test("development builds leave installed-release update and recovery state untouched", async () => {
   for (const channel of ["stable", "beta", "experimental"] as const) {
     const h = harness({ dev: true, beta: channel === "beta" });
@@ -391,7 +413,13 @@ test("account requests use native-aware transport and retry with the refreshed t
         return true;
       },
     },
-    "@/lib/config/endpoints": { HARBOR_API_BASE: "https://example.test" },
+    "@/lib/config/endpoints": {
+      HARBOR_API_BASE: "https://example.test",
+      OWNED_SERVICES: { capabilities: { themes: true, social: true, profileSync: true } },
+      HARBOR_ACCOUNT_ENABLED: true,
+      HARBOR_THEMES_ENABLED: true,
+      HARBOR_SOCIAL_ENABLED: true,
+    },
     "@/lib/safe-fetch": {
       safeFetch: async (url: string, options: { headers: unknown; signal: unknown }) => {
         calls.push({

@@ -14,6 +14,7 @@ mod diagnostics;
 mod download;
 mod ebook_tts;
 mod fonts;
+mod owned_services;
 mod gamepad;
 mod http_fetch;
 mod http_redirect;

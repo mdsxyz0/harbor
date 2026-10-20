@@ -8,7 +8,8 @@ import { scanTheme } from "@/lib/theme-scan";
 import { safeFetch } from "@/lib/safe-fetch";
 import { authToken } from "./theme-auth";
 import { getDownloadRecords, recordDownloadedTheme } from "@/lib/theme-updates";
-import { HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { HARBOR_ACCOUNT_ENABLED, HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { serviceNotConfiguredError } from "@/lib/config/owned-services";
 
 const ORIGIN = HARBOR_API_BASE;
 const API = `${ORIGIN}/themes/api`;
@@ -317,6 +318,7 @@ export async function setVisibility(
   ownerToken: string,
   visibility: "public" | "unlisted",
 ): Promise<void> {
+  if (!HARBOR_ACCOUNT_ENABLED) throw serviceNotConfiguredError("themes");
   const r = await safeFetch(`${API}/themes/${id}/visibility`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${ownerToken}` },
@@ -326,6 +328,7 @@ export async function setVisibility(
 }
 
 export async function deleteUpload(id: string, ownerToken: string): Promise<void> {
+  if (!HARBOR_ACCOUNT_ENABLED) throw serviceNotConfiguredError("themes");
   const r = await safeFetch(`${API}/themes/${id}/delete`, {
     method: "POST",
     headers: { Authorization: `Bearer ${ownerToken}` },
@@ -373,6 +376,7 @@ export async function themeVersions(
 }
 
 export async function claimTheme(id: string, ownerToken: string): Promise<StoreTheme> {
+  if (!HARBOR_ACCOUNT_ENABLED) throw serviceNotConfiguredError("themes");
   const r = await safeFetch(`${API}/themes/${id}/claim`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },

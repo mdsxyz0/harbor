@@ -20,6 +20,7 @@ import {
 } from "@/lib/player/subtitle-offset";
 import { sanitizeBufferSize } from "@/lib/player/buffer-profile";
 import { sanitizeScreensaverMedia } from "@/lib/screensaver/media";
+import { isLegacyHarborUrl } from "@/lib/config/owned-services";
 import {
   sanitizeControllerCursor,
   sanitizeControllerCursorHideMs,
@@ -362,6 +363,8 @@ function parseStoredSettings(raw: string | null): Settings {
       ...DEFAULT,
       ...parsed,
       ...posterCards,
+      togetherRelayUrl: isLegacyHarborUrl(parsed.togetherRelayUrl ?? "") ? "" : parsed.togetherRelayUrl ?? DEFAULT.togetherRelayUrl,
+      communitySyncUrl: isLegacyHarborUrl(parsed.communitySyncUrl ?? "") ? "" : parsed.communitySyncUrl ?? DEFAULT.communitySyncUrl,
       showQuickGameLibrary: parsed.showQuickGameLibrary === true,
       topbarAppearance: sanitizeTopbarAppearance(
         parsed.topbarAppearance,

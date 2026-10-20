@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSettings } from "@/lib/settings";
+import { isLegacyHarborUrl } from "@/lib/config/owned-services";
 import { randomUuid } from "@/lib/uuid";
 import { TogetherClient, type RoomEvent, type RoomSnapshot } from "./client";
 import { useSelfIdentity } from "./use-self-identity";
@@ -133,7 +134,7 @@ async function resolveShareableAvatar(a: string | null): Promise<string | null> 
 export function TogetherProvider({ children }: { children: ReactNode }) {
   const { settings, update } = useSettings();
   const { avatar: effectiveAvatar, color: effectiveColor } = useSelfIdentity();
-  const relayUrl = settings.togetherRelayUrl;
+  const relayUrl = isLegacyHarborUrl(settings.togetherRelayUrl) ? "" : settings.togetherRelayUrl;
 
   const clientIdRef = useRef<string>(loadOrInitClientId());
   const [displayName, setDisplayNameState] = useState<string>(loadOrInitName());

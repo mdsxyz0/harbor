@@ -24,7 +24,7 @@ const requests = new CompanionRequests(async (url, signal) => {
   if (Date.now() < cooldown) throw Error("Galactic War provider is rate limiting requests");
   nextRequest = Date.now() + 2600;
   const response = await safeFetchBytes(url, { signal, credentials: "omit", headers: {
-    "X-Super-Client": "HarborGameCompanions", "X-Super-Contact": "https://github.com/harborstremio/harbor/issues", "Accept-Language": "en-US",
+    "X-Super-Client": "HarborGameCompanions", "X-Super-Contact": "https://github.com/mdsxyz0/harbor/issues", "Accept-Language": "en-US",
   } }, 15_000, MAX_BYTES);
   if (response.status === 429) cooldown = retryAfterTime(response.headers.get("retry-after"), Date.now());
   if (!response.ok) throw Error(`Galactic War provider ${response.status}`);

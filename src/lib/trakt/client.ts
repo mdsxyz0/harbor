@@ -5,6 +5,7 @@ import {
   TRAKT_TOKEN_PROXY,
 } from "./config";
 import { getSession, setSession } from "./session";
+import { OWNED_SERVICES } from "@/lib/config/endpoints";
 import type { TraktSession } from "./types";
 
 export type TraktRequestOptions = {
@@ -31,6 +32,7 @@ function baseHeaders(): HeadersInit {
 }
 
 async function refreshAccessToken(): Promise<TraktSession | null> {
+  if (!OWNED_SERVICES.capabilities.traktTokenExchange) return null;
   const current = getSession();
   if (!current) return null;
   const res = await fetch(TRAKT_TOKEN_PROXY, {

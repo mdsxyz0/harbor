@@ -158,7 +158,7 @@ export function AutoSyncPanel() {
           onClose={() => setServerOpen(false)}
           title={t("Community sync server")}
           sub={t(
-            "Leave this blank to use Harbor's own community server, or enter the address of a server you run yourself.",
+            "Enter the address of a community sync server you run yourself. No public server is configured for this build.",
           )}
           actions={<>
             <ModalButton ghost onClick={() => setServerOpen(false)}>{t("Cancel")}</ModalButton>
@@ -178,7 +178,7 @@ export function AutoSyncPanel() {
                   saveServer();
                 }
               }}
-              placeholder={t("https://sync.harbor.site")}
+              placeholder="https://your-server.example"
               spellCheck={false}
               autoComplete="off"
               className="h-11 w-full min-w-0 max-w-[520px] rounded-[10px] border border-edge-soft bg-elevated px-4 text-[16.5px] text-ink outline-none placeholder:text-ink-subtle/55 focus-visible:border-edge focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"

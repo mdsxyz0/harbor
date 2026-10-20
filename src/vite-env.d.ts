@@ -13,6 +13,8 @@ interface ImportMetaEnv {
   readonly VITE_HARBOR_TRAKT_BASE?: string;
   readonly VITE_HARBOR_MAL_BASE?: string;
   readonly VITE_HARBOR_TVDB_BASE?: string;
+  readonly VITE_HARBOR_UPDATES_BASE?: string;
+  readonly VITE_HARBOR_DISCORD_INVITE?: string;
 }
 
 interface Window {

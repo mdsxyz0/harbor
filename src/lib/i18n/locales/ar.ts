@@ -1,4 +1,5 @@
 import playOrders from "./ar/play-orders";
+import ownedServices from "./ar/owned-services";
 import gameRomLibrary from "./ar/game-rom-library";
 import gameNotes from "./ar/game-notes";
 import gameLibraryRefinements from "./ar/game-library-refinements";
@@ -382,6 +383,7 @@ const ar: Record<string, string> = {
   ...gameRomLibrary,
   ...gameNotes,
   ...playOrders,
+  ...ownedServices,
 };
 
 export default ar;

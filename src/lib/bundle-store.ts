@@ -2,7 +2,8 @@ import { authToken } from "./theme-auth";
 import { clientId, type MyUpload } from "./theme-store";
 import { installAwardPack, type AwardPack } from "./award-icons";
 import { installStreamBadgePack } from "./community-badge-packs";
-import { HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { HARBOR_ACCOUNT_ENABLED, HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { serviceNotConfiguredError } from "@/lib/config/owned-services";
 import { safeFetch } from "@/lib/safe-fetch";
 
 const ORIGIN = HARBOR_API_BASE;
@@ -186,6 +187,7 @@ export async function myBundles(): Promise<StoreBundle[]> {
 }
 
 export async function deleteBundle(id: string, ownerToken: string): Promise<void> {
+  if (!HARBOR_ACCOUNT_ENABLED) throw serviceNotConfiguredError("bundles");
   const r = await safeFetch(`${API}/bundles/${id}/delete`, {
     method: "POST",
     headers: { Authorization: `Bearer ${ownerToken}` },

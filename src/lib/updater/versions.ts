@@ -1,8 +1,8 @@
 import { isMacDesktop, isWindowsDesktop } from "@/lib/platform";
 import { safeFetch } from "@/lib/safe-fetch";
-import { HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { HARBOR_UPDATES_BASE, HARBOR_UPDATES_ENABLED } from "@/lib/config/endpoints";
 
-const INDEX_URL = `${HARBOR_API_BASE}/updates/versions-beta.json`;
+const INDEX_URL = `${HARBOR_UPDATES_BASE}/updates/versions-beta.json`;
 
 export type VersionEntry = {
   version: string;
@@ -16,6 +16,7 @@ export type VersionEntry = {
 export const currentVersion = __APP_VERSION__;
 
 export async function fetchVersionHistory(): Promise<VersionEntry[]> {
+  if (!HARBOR_UPDATES_ENABLED) return [];
   const res = await safeFetch(INDEX_URL, { cache: "no-store" });
   if (!res.ok) throw new Error(`history ${res.status}`);
   const data = (await res.json()) as { versions?: VersionEntry[] };

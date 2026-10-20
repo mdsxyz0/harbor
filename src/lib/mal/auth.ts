@@ -1,4 +1,5 @@
 import { MAL_AUTHORIZE_URL, MAL_CLIENT_ID, MAL_TOKEN_PROXY } from "./config";
+import { OWNED_SERVICES } from "@/lib/config/endpoints";
 import { getSession, setSession } from "./session";
 import type { MalSession } from "./types";
 
@@ -14,6 +15,9 @@ function generateVerifier(): string {
 let storedVerifier: string | null = null;
 
 export function buildAuthorizeUrl(): string {
+  if (!OWNED_SERVICES.capabilities.malTokenExchange) {
+    throw new Error("MyAnimeList sign-in is not configured for this build.");
+  }
   if (!MAL_CLIENT_ID) throw new Error("MAL_CLIENT_ID not configured. Set VITE_MAL_CLIENT_ID in your .env or register an app at https://myanimelist.net/apiconfig.");
   const verifier = generateVerifier();
   storedVerifier = verifier;
@@ -74,6 +78,9 @@ async function exchangeCode(
   code: string,
   codeVerifier: string,
 ): Promise<{ access_token: string; refresh_token: string; expires_in: number }> {
+  if (!OWNED_SERVICES.capabilities.malTokenExchange) {
+    throw new Error("MyAnimeList sign-in is not configured for this build.");
+  }
   const res = await tauriFetch(MAL_TOKEN_PROXY, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -94,6 +101,7 @@ async function exchangeCode(
 }
 
 export async function refreshAccessToken(): Promise<MalSession | null> {
+  if (!OWNED_SERVICES.capabilities.malTokenExchange) return null;
   const current = getSession();
   if (!current?.refreshToken) return null;
   try {

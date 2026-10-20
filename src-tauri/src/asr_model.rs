@@ -3,7 +3,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use tauri::{Emitter, Manager};
 
-const MODEL_URL: &str = "https://harbor.site/models/ggml-tiny.bin";
 const MODEL_FILE: &str = "ggml-tiny.bin";
 const MIN_VALID_BYTES: u64 = 1_000_000;
 
@@ -30,6 +29,8 @@ pub async fn asr_ensure_model(app: tauri::AppHandle) -> Result<String, String> {
     if let Some(p) = existing(&app)? {
         return Ok(p.to_string_lossy().into_owned());
     }
+    let model_url = crate::owned_services::asr_model_url()
+        .ok_or("The speech recognition model download service is not configured for this build.")?;
     let dir = model_dir(&app)?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("create dir: {}", e))?;
     let dest = dir.join(MODEL_FILE);
@@ -40,7 +41,7 @@ pub async fn asr_ensure_model(app: tauri::AppHandle) -> Result<String, String> {
         .build()
         .map_err(|e| e.to_string())?;
     let resp = client
-        .get(MODEL_URL)
+        .get(model_url)
         .send()
         .await
         .map_err(|e| format!("download model: {}", e))?;

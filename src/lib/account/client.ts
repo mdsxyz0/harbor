@@ -1,6 +1,7 @@
 import { authenticatedFetch } from "./authenticated-fetch";
 import { captureSessionScope } from "@/lib/theme-auth";
-import { HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { HARBOR_ACCOUNT_ENABLED, HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { serviceNotConfiguredError } from "@/lib/config/owned-services";
 import { safeFetch } from "@/lib/safe-fetch";
 
 const API = `${HARBOR_API_BASE}/themes/api`;
@@ -47,6 +48,7 @@ export async function getJson<T>(
   path: string,
   opts?: { bearer?: boolean; signal?: AbortSignal },
 ): Promise<T> {
+  if (!HARBOR_ACCOUNT_ENABLED) throw serviceNotConfiguredError("account");
   const isCurrent = opts?.bearer ? captureSessionScope() : () => true;
   const send = opts?.bearer ? authenticatedFetch : safeFetch;
   const r = await send(url(path), { signal: opts?.signal });
@@ -58,6 +60,7 @@ export async function postJson<T>(
   body: Record<string, unknown>,
   opts?: { bearer?: boolean },
 ): Promise<T> {
+  if (!HARBOR_ACCOUNT_ENABLED) throw serviceNotConfiguredError("account");
   const isCurrent = opts?.bearer ? captureSessionScope() : () => true;
   const send = opts?.bearer ? authenticatedFetch : safeFetch;
   const r = await send(url(path), {

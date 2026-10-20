@@ -12,38 +12,22 @@ on:
 permissions:
   contents: read
 
-env:
-  # The extension compat layer is not in this repository, so a runner cannot stage its runtime.
-  # This build compiles without it and says so. Drop this line once the layer ships with the
-  # checkout, and the build starts refusing to omit it.
-  HARBOR_CAPSTAN_OPTIONAL: "1"
-
 concurrency:
   group: app-build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: ${{ matrix.platform.name }}
-    runs-on: ${{ matrix.platform.runner }}
+  quality:
+    name: Required quality and native checks
+    runs-on: ubuntu-22.04
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - name: Windows
-            runner: windows-latest
-          - name: macOS
-            runner: macos-latest
-          - name: Linux
-            runner: ubuntu-22.04
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install Linux build dependencies
-        if: matrix.platform.name == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -53,13 +37,9 @@ jobs:
             libmpv-dev \
             librsvg2-dev \
             libssl-dev \
+            libudev-dev \
             libwebkit2gtk-4.1-dev \
-            pkg-config \
-            xz-utils
-
-      - name: Install macOS build dependencies
-        if: matrix.platform.name == 'macOS'
-        run: brew install mpv pkg-config
+            pkg-config
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -71,28 +51,229 @@ jobs:
             harbor-core
             src-tauri
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
         with:
           node-version: 24
-          cache: pnpm
+          cache: true
+          run-install: |
+            args:
+              - --frozen-lockfile
+
+      - name: Check formatting
+        run: vp fmt --check .github/workflows/app-build.yml scripts/fetch-libmpv.mjs scripts/fetch-mpv.mjs tools/pokemon-engine/README.md src/lib/config/owned-services.ts src/lib/config/service-url.ts src/lib/config/owned-services.json src/lib/i18n/locales/ar/owned-services.ts tests/owned-services-config.test.ts
+
+      - name: Check changed frontend code
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          baseline=b43594add58e0fa501b03f4fc2f95f4d40667f0b
+          mapfile -t code_files < <(
+            git diff --name-only --diff-filter=ACMR "$baseline" HEAD -- \
+              '*.ts' '*.tsx' '*.mjs' '*.js'
+          )
+          if ((${#code_files[@]})); then
+            pnpm run check --no-fmt "${code_files[@]}"
+          else
+            echo "No changed frontend code files require checks."
+          fi
+
+      - name: Check owned-services safeguards
+        if: ${{ !cancelled() && hashFiles('scripts/check-owned-services.mjs') != '' }}
+        run: node scripts/check-owned-services.mjs
+
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: pnpm run typecheck
+
+      - name: Test owned services and experimental updater
+        if: ${{ !cancelled() }}
+        run: node --experimental-loader ./scripts/node-test-loader.mjs --test tests/owned-services*.test.ts tests/updater-experimental.test.ts tests/session-refresh.test.mjs
+
+      - name: Check Tauri application
+        if: ${{ !cancelled() }}
+        env:
+          # Cargo check does not package sidecars or staged app resources.
+          TAURI_CONFIG: '{"bundle":{"externalBin":[],"resources":[]}}'
+        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+      - name: Capture formatting patch after failed checks
+        if: ${{ failure() && !cancelled() }}
+        shell: bash
+        run: |
+          format_files=(
+            .github/workflows/app-build.yml
+            scripts/fetch-libmpv.mjs
+            scripts/fetch-mpv.mjs
+            scripts/check-owned-services.mjs
+            tools/pokemon-engine/README.md
+            src/lib/config/owned-services.ts
+            src/lib/config/service-url.ts
+            src/lib/config/owned-services.json
+            src/lib/i18n/locales/ar/owned-services.ts
+            tests/owned-services-config.test.ts
+            tests/updater-experimental.test.ts
+          )
+          existing_files=()
+          for file in "${format_files[@]}"; do
+            [[ -f "$file" ]] && existing_files+=("$file")
+          done
+          format_status=0
+          if ((${#existing_files[@]})); then
+            vp fmt "${existing_files[@]}" || format_status=$?
+          fi
+          git diff --binary > "$RUNNER_TEMP/formatting.patch"
+          exit "$format_status"
+
+      - name: Upload formatting patch
+        if: ${{ failure() && !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: formatting-patch
+          path: ${{ runner.temp }}/formatting.patch
+          if-no-files-found: error
+          retention-days: 7
+
+  build-windows:
+    name: Windows x64 NSIS installer
+    runs-on: windows-latest
+    timeout-minutes: 120
+    # This beta workflow deliberately allows a build without the missing extension layer.
+    # capstan-stage.mjs reports that extension support is disabled; no capability is claimed.
+    env:
+      HARBOR_CAPSTAN_OPTIONAL: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            harbor-core
+            src-tauri
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          cache: true
+          run-install: |
+            args:
+              - --frozen-lockfile
 
       - name: Set up Pokémon engine SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.401'
+          dotnet-version: "10.0.401"
 
-      - name: Build Pokémon engine and corresponding source bundle
+      - name: Build Pokémon engine and source bundle
         run: node tools/pokemon-engine/build.mjs --fetch-source "${{ runner.temp }}/harbor-pokemon-source" --output src-tauri/resources/pokemon-engine --artifacts "${{ runner.temp }}/harbor-pokemon-build"
 
-      - name: Install JavaScript dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Ensure NSIS is available
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            choco install nsis --yes --no-progress
+          }
+          $nsisDirectory = Join-Path ${env:ProgramFiles(x86)} "NSIS"
+          if (Test-Path (Join-Path $nsisDirectory "makensis.exe")) {
+            Add-Content -Path $env:GITHUB_PATH -Value $nsisDirectory
+            $env:PATH = "$nsisDirectory;$env:PATH"
+          }
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            throw "NSIS (makensis.exe) is unavailable on this runner."
+          }
 
-      - name: Prepare build assets
+      - name: Prepare Windows build assets (Capstan optional)
         run: pnpm run setup
 
-      - name: Build app without installers
-        run: pnpm tauri build --no-bundle
+      - name: Build Windows x64 NSIS installer
+        run: pnpm tauri build --target x86_64-pc-windows-msvc --bundles nsis
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor-windows-x64-nsis
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  build-linux:
+    name: Linux system packages
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    # This beta workflow deliberately allows a build without the missing extension layer.
+    # capstan-stage.mjs reports that extension support is disabled; no capability is claimed.
+    env:
+      HARBOR_CAPSTAN_OPTIONAL: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libayatana-appindicator3-dev \
+            libgtk-3-dev \
+            libmpv-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libudev-dev \
+            libwebkit2gtk-4.1-dev \
+            pkg-config \
+            patchelf \
+            xdg-utils \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-libav \
+            xz-utils
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            harbor-core
+            src-tauri
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: 24
+          cache: true
+          run-install: |
+            args:
+              - --frozen-lockfile
+
+      - name: Set up Pokémon engine SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.401"
+
+      - name: Build Pokémon engine and source bundle
+        run: node tools/pokemon-engine/build.mjs --fetch-source "${{ runner.temp }}/harbor-pokemon-source" --output src-tauri/resources/pokemon-engine --artifacts "${{ runner.temp }}/harbor-pokemon-build"
+
+      - name: Prepare Linux build assets (Capstan optional)
+        run: pnpm run setup
+
+      - name: Build full Linux system package
+        run: pnpm tauri:build:linux-system
+
+      - name: Upload Linux system build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor-linux-system-x64
+          path: |
+            src-tauri/target/release/harbor
+            src-tauri/target/release/bundle/
+          if-no-files-found: error
+          retention-days: 14

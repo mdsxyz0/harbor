@@ -530,7 +530,7 @@ export function parseBrackets(wikitext: string): LiquipediaBracket[] {
   });
 }
 
-const AGENT = "HarborEsports/1.0 (https://harbor.site; bugs@harbor.site)";
+const AGENT = "HarborEsports/1.0 (https://github.com/mdsxyz0/harbor; https://github.com/mdsxyz0/harbor/issues)";
 
 /**
  * Api-User-Agent is MediaWiki's own channel for platforms that own the User-Agent header. Harbor's

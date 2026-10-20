@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -19,15 +18,15 @@ if (process.platform !== "win32") {
   process.exit(0);
 }
 
-const RELEASE = "20261010";
+const RELEASE = "20261020";
 const SPECS = {
   x64: {
-    asset: "mpv-x86_64-20261010-git-b2c255c13e.7z",
-    sha256: "70a568c046a10f0b365319c4ec5382d8fb37f509615944b7e9932b66e5ccfb25",
+    asset: "mpv-x86_64-20261020-git-6a262d11f6.7z",
+    sha256: "cbeda25235a24e9145f6ab3e784052e437e6e5aac306b682afd2bbf0070ddea8",
   },
   arm64: {
-    asset: "mpv-aarch64-20261010-git-b2c255c13e.7z",
-    sha256: "c3aabf7bcc2c7b1350b46571e992437d53164a7f11ff54010d8715a913c80f2f",
+    asset: "mpv-aarch64-20261020-git-6a262d11f6.7z",
+    sha256: "ad6b33c03cb4b417348d44bd393a10876ff7c619d04349c8a8954dc8db6cec2f",
   },
 };
 
@@ -37,12 +36,13 @@ if (!spec) {
 }
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const destination = join(root, "src-tauri", "binaries", "mpv-x86_64-pc-windows-msvc.exe");
-
-if (existsSync(destination) && statSync(destination).size > 0) {
-  console.log(`[mpv] ${destination} already present`);
-  process.exit(0);
-}
+const targetArch = process.arch === "arm64" ? "aarch64" : "x86_64";
+const destination = join(
+  root,
+  "src-tauri",
+  "binaries",
+  `mpv-${targetArch}-pc-windows-msvc.exe`,
+);
 
 function findFile(dir, name) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -81,6 +81,7 @@ try {
 
   const mpv = findFile(extracted, "mpv.exe");
   if (!mpv) throw new Error("[mpv] mpv.exe was not found in the archive");
+  if (statSync(mpv).size === 0) throw new Error("[mpv] mpv.exe in the archive is empty");
   mkdirSync(dirname(destination), { recursive: true });
   copyFileSync(mpv, destination);
   console.log(`[mpv] wrote ${destination}`);

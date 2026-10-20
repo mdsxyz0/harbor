@@ -1,4 +1,5 @@
-import { HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { HARBOR_ACCOUNT_ENABLED, HARBOR_API_BASE } from "@/lib/config/endpoints";
+import { serviceNotConfiguredError } from "@/lib/config/owned-services";
 import { safeFetch } from "@/lib/safe-fetch";
 
 const API = `${HARBOR_API_BASE}/themes/api`;
@@ -190,7 +191,7 @@ export function currentAuthor(): Author | null {
 }
 
 export function authToken(): string | null {
-  return session ? session.token : null;
+  return HARBOR_ACCOUNT_ENABLED && session ? session.token : null;
 }
 
 export function refreshTokenValue(): string | null {
@@ -256,6 +257,7 @@ export function sessionRefreshDelay(): number | null {
 }
 
 export async function refreshToken(rejectedToken?: string): Promise<boolean> {
+  if (!HARBOR_ACCOUNT_ENABLED) return false;
   const isCurrent = captureSessionScope();
   const captured = session;
   if (!captured) return false;
@@ -359,6 +361,9 @@ async function postAuth(
   bearer?: string,
   signal?: AbortSignal,
 ) {
+  if (!HARBOR_ACCOUNT_ENABLED) {
+    throw serviceNotConfiguredError("account");
+  }
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
   const r = await safeFetch(`${API}/auth/${path}`, {
@@ -426,6 +431,7 @@ export async function checkUsernameAvailable(
   username: string,
   signal?: AbortSignal,
 ): Promise<boolean> {
+  if (!HARBOR_ACCOUNT_ENABLED) throw serviceNotConfiguredError("account");
   const r = await safeFetch(`${API}/auth/username-available?u=${encodeURIComponent(username)}`, {
     signal,
   });

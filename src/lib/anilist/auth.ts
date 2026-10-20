@@ -5,12 +5,16 @@ import {
   ANILIST_TOKEN_EXCHANGE_URL,
 } from "./config";
 import { fetchViewer } from "./queries";
+import { OWNED_SERVICES } from "@/lib/config/endpoints";
 import { setSession } from "./session";
 import type { AnilistSession } from "./types";
 
 const DEFAULT_TOKEN_TTL_SEC = 31536000;
 
 export function buildAuthorizeUrl(): string {
+  if (!OWNED_SERVICES.capabilities.anilistTokenExchange) {
+    throw new Error("AniList sign-in is not configured for this build.");
+  }
   const params = new URLSearchParams({
     client_id: ANILIST_CLIENT_ID,
     redirect_uri: ANILIST_PIN_REDIRECT_URI,
@@ -52,6 +56,9 @@ export async function completeAuthorization(pastedCode: string): Promise<Anilist
 }
 
 async function exchangeCode(code: string): Promise<string> {
+  if (!OWNED_SERVICES.capabilities.anilistTokenExchange) {
+    throw new Error("AniList sign-in is not configured for this build.");
+  }
   const isTauri = "__TAURI__" in window || "__TAURI_INTERNALS__" in window;
   const post = isTauri ? (await import("@tauri-apps/plugin-http")).fetch : fetch;
   const res = await post(ANILIST_TOKEN_EXCHANGE_URL, {

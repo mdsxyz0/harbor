@@ -4,6 +4,7 @@ import {
   TRAKT_DEVICE_TOKEN_PROXY,
 } from "./config";
 import { setSession } from "./session";
+import { OWNED_SERVICES } from "@/lib/config/endpoints";
 import type { DeviceCode, TraktSession, TraktUserMe } from "./types";
 
 const baseHeaders = (): HeadersInit => ({
@@ -11,6 +12,9 @@ const baseHeaders = (): HeadersInit => ({
 });
 
 export async function requestDeviceCode(): Promise<DeviceCode> {
+  if (!OWNED_SERVICES.capabilities.traktTokenExchange) {
+    throw new Error("Trakt sign-in is not configured for this build.");
+  }
   const res = await fetch(`${TRAKT_API_BASE}/oauth/device/code`, {
     method: "POST",
     headers: baseHeaders(),
@@ -44,6 +48,9 @@ export type PollResult =
   | { kind: "error"; message: string };
 
 async function pollOnce(deviceCode: string): Promise<PollResult> {
+  if (!OWNED_SERVICES.capabilities.traktTokenExchange) {
+    return { kind: "error", message: "Trakt sign-in is not configured for this build." };
+  }
   const res = await fetch(TRAKT_DEVICE_TOKEN_PROXY, {
     method: "POST",
     headers: baseHeaders(),

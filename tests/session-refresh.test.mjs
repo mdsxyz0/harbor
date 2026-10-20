@@ -80,7 +80,16 @@ function fixture(options = {}) {
     clearTimeout: (id) => timers.delete(id),
   });
   const modules = {
-    "@/lib/config/endpoints": { HARBOR_API_BASE: "https://example.invalid" },
+    "@/lib/config/endpoints": {
+      HARBOR_API_BASE: "https://example.invalid",
+      HARBOR_DEFAULT_API_ORIGIN: "https://example.invalid",
+      HARBOR_ACCOUNT_ENABLED: options.servicesEnabled !== false,
+      HARBOR_THEMES_ENABLED: options.servicesEnabled !== false,
+      HARBOR_SOCIAL_ENABLED: options.servicesEnabled !== false,
+    },
+    "@/lib/config/owned-services": {
+      serviceNotConfiguredError: (service) => Object.assign(new Error(`Harbor ${service} service is not configured.`), { status: 503, code: "service_not_configured" }),
+    },
     "@/lib/safe-fetch": { safeFetch: transport },
   };
   function load(path) {
@@ -152,6 +161,18 @@ test("concurrent refresh callers and identity wrapper share one rotation", async
   assert.deepEqual(await Promise.all(calls), [true, true, undefined]);
   assert.equal(h.auth.authToken(), "renewed-a");
   assert.equal(h.stored().refresh, "rotated-a");
+});
+
+test("disabled Harbor account service never sends stored credentials and preserves local session", async () => {
+  const h = fixture({ servicesEnabled: false });
+  const before = h.stored();
+  assert.equal(h.auth.authToken(), null);
+  await assert.rejects(
+    h.authenticated("https://example.invalid/themes/api/social/me/profile"),
+    (error) => error.status === 503 && error.code === "service_not_configured",
+  );
+  assert.equal(h.requests.length, 0);
+  assert.deepEqual(h.stored(), before);
 });
 
 test("rotation survives restart without refreshing again immediately", async () => {

@@ -1,6 +1,10 @@
 import { useSyncExternalStore } from "react";
 import { check } from "@tauri-apps/plugin-updater";
-import { HARBOR_API_BASE } from "@/lib/config/endpoints";
+import {
+  HARBOR_DOWNLOAD_URL,
+  HARBOR_UPDATES_BASE,
+  HARBOR_UPDATES_ENABLED,
+} from "@/lib/config/endpoints";
 import { t } from "@/lib/i18n";
 import {
   normalUpdateChannel,
@@ -42,6 +46,8 @@ const IS_TAURI = typeof window !== "undefined" && "__TAURI_INTERNALS__" in windo
 const DISMISS_KEY = "harbor.update.dismissed";
 const PENDING_KEY = "harbor.update.pending";
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const UPDATES_UNAVAILABLE = HARBOR_UPDATES_ENABLED === false;
+const UPDATES_UNAVAILABLE_MESSAGE = "Automatic updates are not configured for this build. Download builds from our GitHub repository.";
 
 export type UpdateStatus =
   | "idle"
@@ -87,13 +93,13 @@ let state: UpdateState = {
   channel: selectedUpdateChannel(),
   buildId: null,
   experimentalVersion: null,
-  status: "idle",
+  status: UPDATES_UNAVAILABLE ? "unavailable" : "idle",
   version: null,
   notes: null,
   progress: 0,
   downloadedBytes: 0,
   totalBytes: 0,
-  error: null,
+  error: UPDATES_UNAVAILABLE ? t(UPDATES_UNAVAILABLE_MESSAGE) : null,
   installFailed: false,
   manualCheck: false,
   dismissed: readDismissed(),
@@ -224,7 +230,7 @@ async function runningPrerelease(): Promise<boolean> {
       import("@tauri-apps/api/app"),
       import("@/lib/safe-fetch"),
     ]);
-    const res = await safeFetch(`${HARBOR_API_BASE}/updates/latest.json`, { cache: "no-store" });
+    const res = await safeFetch(`${HARBOR_UPDATES_BASE}/updates/latest.json`, { cache: "no-store" });
     if (!res.ok) return false;
     const stable = (await res.json()) as { version?: string };
     if (!stable.version) return false;
@@ -243,7 +249,7 @@ async function readExperimentalManifest(path = "latest-experimental.json"): Prom
     // for that recheck without changing normal-channel routes or proxying it.
     const manifestFetch =
       path === "latest-experimental.json" ? fetch : (await import("@tauri-apps/plugin-http")).fetch;
-    const response = await manifestFetch(`${HARBOR_API_BASE}/updates/${path}`, {
+    const response = await manifestFetch(`${HARBOR_UPDATES_BASE}/updates/${path}`, {
       cache: "no-store",
       signal: controller.signal,
     });
@@ -254,6 +260,10 @@ async function readExperimentalManifest(path = "latest-experimental.json"): Prom
 }
 
 export async function checkForUpdate(manual = false): Promise<void> {
+  if (UPDATES_UNAVAILABLE) {
+    set({ status: "unavailable", error: t(UPDATES_UNAVAILABLE_MESSAGE), manualCheck: manual });
+    return;
+  }
   if (!IS_TAURI) return;
   // The downloaded update package always installs to the real Harbor install
   // location regardless of this build's identifier, so in dev it would silently
@@ -442,6 +452,10 @@ async function refreshBetaReturnContext(): Promise<void> {
 }
 
 export async function prepareBetaReturn(version: string): Promise<void> {
+  if (UPDATES_UNAVAILABLE) {
+    set({ status: "unavailable", error: t(UPDATES_UNAVAILABLE_MESSAGE) });
+    return;
+  }
   if (import.meta.env.DEV) return;
   if (!IS_TAURI || updateChannelLocked() || state.status === "checking") return;
   clearStagedUpdate();
@@ -704,20 +718,25 @@ function cmpVersion(a: string, b: string): number {
 }
 
 export async function openManualDownload(): Promise<void> {
+  if (UPDATES_UNAVAILABLE) {
+    const { openUrl } = await import("@/lib/window");
+    await openUrl(HARBOR_DOWNLOAD_URL);
+    return;
+  }
   // Experimental downloads must go through signature verification in the app.
   if (selectedUpdateChannel() === "experimental" || state.channel === "experimental") {
     await checkForUpdate(true);
     return;
   }
   const { openUrl } = await import("@/lib/window");
-  let target = HARBOR_API_BASE;
+  let target = HARBOR_DOWNLOAD_URL;
   try {
     const { safeFetch } = await import("@/lib/safe-fetch");
     const beta =
       selectedUpdateChannel() === "beta" ||
       (!readChannelPreference() && (await runningPrerelease()));
     const [res, probe] = await Promise.all([
-      safeFetch(`${HARBOR_API_BASE}/updates/latest.json`, beta ? BETA_HEADERS : undefined),
+      safeFetch(`${HARBOR_UPDATES_BASE}/updates/latest.json`, beta ? BETA_HEADERS : undefined),
       probeHandoff(),
     ]);
     if (res.ok && probe) {
@@ -736,13 +755,17 @@ export async function openManualDownload(): Promise<void> {
 }
 
 export async function openHandoffDownload(): Promise<void> {
+  if (UPDATES_UNAVAILABLE) {
+    await openManualDownload();
+    return;
+  }
   if (state.channel === "experimental") {
     await checkForUpdate(true);
     return;
   }
   const url = state.handoff?.url;
   const { openUrl } = await import("@/lib/window");
-  openUrl(url || HARBOR_API_BASE);
+  openUrl(url || HARBOR_DOWNLOAD_URL);
 }
 
 function clearPending(): void {
@@ -914,6 +937,7 @@ export function clearStagedUpdate(): void {
 
 let started = false;
 export function startUpdateWatcher(): void {
+  if (UPDATES_UNAVAILABLE) return;
   if (import.meta.env.DEV) return;
   if (started || !IS_TAURI) return;
   started = true;

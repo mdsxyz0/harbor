@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "service": "harbor-services",
+  "origins": {
+    "api": "https://harbor-services.xyz7.workers.dev",
+    "bugs": "https://harbor-services.xyz7.workers.dev",
+    "sync": "https://harbor-services.xyz7.workers.dev",
+    "trakt": "https://harbor-services.xyz7.workers.dev",
+    "mal": "https://harbor-services.xyz7.workers.dev",
+    "tvdb": "https://harbor-services.xyz7.workers.dev",
+    "relayHttp": "https://harbor-services.xyz7.workers.dev",
+    "relayWebSocket": ""
+  },
+  "links": {
+    "repository": "https://github.com/mdsxyz0/harbor",
+    "support": "https://github.com/mdsxyz0/harbor/issues",
+    "downloads": "https://github.com/mdsxyz0/harbor/actions/workflows/app-build.yml"
+  },
+  "capabilities": {
+    "health": true,
+    "config": true,
+    "themes": false,
+    "social": false,
+    "profileSync": false,
+    "bugs": false,
+    "reports": false,
+    "traktTokenExchange": false,
+    "malTokenExchange": false,
+    "anilistTokenExchange": false,
+    "tvdbProxy": false,
+    "updates": false,
+    "models": false,
+    "staticAssets": false,
+    "togetherPublicRelay": false,
+    "relayInvites": false
+  }
+}
