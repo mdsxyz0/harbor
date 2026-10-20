@@ -21,13 +21,13 @@ build runs separately on Ubuntu. Windows installation/playback needs native QA.
 
 OWN-HEALTH: GET/HEAD `/health` on a newly created Cloudflare Worker reports process
 liveness. It does not assert legacy services are operational. Acceptance: hosted
-contract tests plus deployed HTTP response. Status: source implemented; checks and
-deployment pending.
+contract tests plus deployed HTTP response. Status: implemented and deployed;
+eight hosted unit contract tests passed; deployed HTTPS checks pending.
 
 OWN-CONFIG: `/v1/config` exposes a versioned public capability map; unimplemented
 services remain unavailable. Unknown paths return 404, unsupported methods 405,
 and recognized unavailable service paths 503. No login, upload, or OAuth handling
-is advertised. Status: source implemented; checks and deployment pending.
+is advertised. Status: implemented and deployed; deployed HTTPS checks pending.
 
 OWN-BRANCHES: completed source/history inventory and a migration plan for all 20
 snapshotted branches. User chose stable first, then selective beta features. No
@@ -69,8 +69,15 @@ logged by the new Worker, and no database or secret binding is attached.
   in `src/lib/config/endpoints.ts`, public watch-party relay, ASR model download,
   and updater still reference the original services. Restoring those services is
   outside this installer build; a successful build does not verify them.
-- Owned service deployment and exact-revision hosted tests pending. Do not change
-  desktop clients to use this foundation as a replacement for missing backends.
+- Owned service source `830269706dd3397d45cb67921da014cacefba594` passed eight
+  contract tests on ubuntu-24.04 / Node 24:
+  https://github.com/mdsxyz0/harbor/actions/runs/39468675965
+  Deployed through the connected Cloudflare API to
+  https://harbor-services.xyz7.workers.dev (workers.dev enabled; previews disabled).
+  Deployment ID: `db4e747e6cb74f67a6aefc05ea549ba4`. Application endpoints have not
+  been redirected. Public HTTPS contract checks pending; web reader could not
+  access the new workers.dev URL, which does not establish a service failure.
+  Do not treat this foundation as a replacement for missing backends.
 - Planned cross-branch migration remains unimplemented. Original OAuth app
   ownership, deleted service data, assets, and old update signing key are not
   available evidence; do not promise automatic recovery or trusted updates for

@@ -20,7 +20,14 @@ The tests use only Node.js built-ins and can be run with:
 node --test services/harbor-api/worker.test.mjs
 ```
 
-To deploy this worker after reviewing the source and choosing the Cloudflare account/subdomain, run Wrangler from this directory. `workers_dev` is enabled; no custom domain or route is configured here.
+The source was deployed using the connected Cloudflare API, without installing
+Wrangler locally. The owned address is `https://harbor-services.xyz7.workers.dev`.
+Public endpoints are `/health` and `/v1/config`; `/health` is liveness only.
+`workers_dev` is enabled; no custom domain or route is configured here.
+
+The App build workflow can run the dependency-free tests with
+`verify_services=true`. Add `verify_deployment=true` for hosted HTTPS contract
+checks against the deployed address. Deployment evidence is in `PROJECT_MAP.md`.
 
 ## Cloudflare references
 
