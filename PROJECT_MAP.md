@@ -22,12 +22,12 @@ build runs separately on Ubuntu. Windows installation/playback needs native QA.
 OWN-HEALTH: GET/HEAD `/health` on a newly created Cloudflare Worker reports process
 liveness. It does not assert legacy services are operational. Acceptance: hosted
 contract tests plus deployed HTTP response. Status: implemented and deployed;
-eight hosted unit contract tests passed; deployed HTTPS checks pending.
+eight hosted unit contract tests and deployed HTTPS checks passed.
 
 OWN-CONFIG: `/v1/config` exposes a versioned public capability map; unimplemented
 services remain unavailable. Unknown paths return 404, unsupported methods 405,
 and recognized unavailable service paths 503. No login, upload, or OAuth handling
-is advertised. Status: implemented and deployed; deployed HTTPS checks pending.
+is advertised. Status: implemented, deployed, and verified over HTTPS from Actions.
 
 OWN-BRANCHES: completed source/history inventory and a migration plan for all 20
 snapshotted branches. User chose stable first, then selective beta features. No
@@ -58,7 +58,9 @@ logged by the new Worker, and no database or secret binding is attached.
   Windows build and artifact upload passed on windows-latest. Produced
   `Harbor_0.9.22_x64-setup.exe`; artifact 12284807491 (231524089 bytes compressed).
   Added the missing Linux development package. Follow-up run for `74163e42`:
-  https://github.com/mdsxyz0/harbor/actions/runs/39466532057 (pending verification).
+  https://github.com/mdsxyz0/harbor/actions/runs/39466532057
+  completed successfully on both Windows and Linux. Windows produced an NSIS
+  installer; Linux system build passed after adding libudev-dev.
 - `pnpm run check` was attempted on Windows: `ERR_PNPM_NO_SCRIPT`, because stable
   package.json has no check script or Vite+. The runner reports this command as
   successful despite printing that error; this is not a passing quality check.
@@ -75,8 +77,14 @@ logged by the new Worker, and no database or secret binding is attached.
   Deployed through the connected Cloudflare API to
   https://harbor-services.xyz7.workers.dev (workers.dev enabled; previews disabled).
   Deployment ID: `db4e747e6cb74f67a6aefc05ea549ba4`. Application endpoints have not
-  been redirected. Public HTTPS contract checks pending; web reader could not
-  access the new workers.dev URL, which does not establish a service failure.
+  been redirected. Final verification source
+  `ff69655c4c7e7f7e6ad3413f4a9ac1cdc62badc6` passed eight contract tests plus live
+  HTTPS assertions on ubuntu-24.04 / Node 24:
+  https://github.com/mdsxyz0/harbor/actions/runs/39469033878
+  Verified health/config GET, HEAD, OPTIONS/CORS, unavailable route 503/retry
+  semantics, unknown route 404, and unsupported method 405. The Worker module is
+  unchanged from deployment source 83026970; later changes add verification and
+  evidence only. The generic pnpm check command remains unavailable in stable.
   Do not treat this foundation as a replacement for missing backends.
 - Planned cross-branch migration remains unimplemented. Original OAuth app
   ownership, deleted service data, assets, and old update signing key are not
