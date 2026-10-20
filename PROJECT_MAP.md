@@ -24,6 +24,14 @@ Existing application code and installer behavior remain in the stable source.
 - Baseline stable run 39196130002: Windows setup fails with HTTP 404 fetching
   `libmpv-2.dll`. Existing App build also uses `--no-bundle` and uploads no installer.
 - Beta run 39195825340: missing `tools/pokemon-engine/README.md`; outside this build.
-- Pending: hosted Windows/Linux builds and installer artifact verification.
+- Hosted Windows/Linux run: https://github.com/mdsxyz0/harbor/actions/runs/39462889461
+  at source commit `687cfb4f`; asset setup passed. Linux failed because the
+  pre-existing dependency list omits `libudev-dev`, required by `libudev-sys`.
+  Added the missing Linux development package; Windows compilation pending.
 - `pnpm run check` is unavailable in stable package.json (no check script or Vite+).
 - Native Windows installation and playback have not been tested.
+- User reports the original repository and hosted services were deleted. This
+  workflow fetches mpv directly from its upstream instead. Application endpoints
+  in `src/lib/config/endpoints.ts`, public watch-party relay, ASR model download,
+  and updater still reference the original services. Restoring those services is
+  outside this installer build; a successful build does not verify them.
