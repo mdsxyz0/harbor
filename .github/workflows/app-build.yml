@@ -3,6 +3,10 @@ name: App build
 on:
   workflow_dispatch:
     inputs:
+      verify_services:
+        description: Verify the standalone Cloudflare service without building desktop apps
+        type: boolean
+        default: false
       windows_installer:
         description: Build a Windows x64 NSIS installer
         type: boolean
@@ -22,7 +26,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  services:
+    if: inputs.verify_services
+    name: Cloudflare service contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Attempt baseline quality command
+        continue-on-error: true
+        run: pnpm run check
+
+      - name: Check worker syntax
+        run: node --check services/harbor-api/worker.mjs
+
+      - name: Test service contracts
+        run: node --test services/harbor-api/worker.test.mjs
+
+      - name: Record unavailable stable quality command
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, appendFileSync } from "node:fs";
+            const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+            if (!pkg.scripts?.check) {
+              appendFileSync(process.env.GITHUB_STEP_SUMMARY, "Baseline: stable package.json has no check script or Vite+. pnpm run check cannot verify this revision.\n");
+            }
+          '
+
   build:
+    if: '!inputs.verify_services'
     name: ${{ matrix.platform.name }}
     runs-on: ${{ matrix.platform.runner }}
     timeout-minutes: 45
