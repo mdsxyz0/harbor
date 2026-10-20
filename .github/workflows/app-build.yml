@@ -2,6 +2,11 @@ name: App build
 
 on:
   workflow_dispatch:
+    inputs:
+      windows_installer:
+        description: Build a Windows x64 NSIS installer
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths-ignore:
@@ -24,13 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - name: Windows
-            runner: windows-latest
-          - name: macOS
-            runner: macos-latest
-          - name: Linux
-            runner: ubuntu-22.04
+        platform: ${{ fromJSON(inputs.windows_installer && '[{"name":"Windows","runner":"windows-latest"},{"name":"Linux","runner":"ubuntu-22.04"}]' || '[{"name":"Windows","runner":"windows-latest"},{"name":"macOS","runner":"macos-latest"},{"name":"Linux","runner":"ubuntu-22.04"}]') }}
 
     steps:
       - name: Checkout
@@ -77,8 +76,68 @@ jobs:
       - name: Install JavaScript dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check baseline quality command
+        if: inputs.windows_installer && matrix.platform.name == 'Windows'
+        continue-on-error: true
+        run: pnpm run check
+
       - name: Prepare build assets
+        if: matrix.platform.name != 'Windows'
         run: pnpm run setup
 
+      - name: Prepare Windows sidecars and fonts
+        if: matrix.platform.name == 'Windows'
+        run: |
+          pnpm run setup:binaries
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm run setup:fonts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Fetch verified Windows mpv builds
+        if: matrix.platform.name == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = '20261020'
+          $revision = 'git-6a262d11f6'
+          $archives = @(
+            @{ Name = "mpv-dev-x86_64-$release-$revision.7z"; SHA256 = 'd16ea67bcc46d4ee9170f05b322d7184768f216f458bef089c3397a6beaff83e'; File = 'libmpv-2.dll'; Destination = 'src-tauri/libmpv/libmpv-2.dll' },
+            @{ Name = "mpv-x86_64-$release-$revision.7z"; SHA256 = 'cbeda25235a24e9145f6ab3e784052e437e6e5aac306b682afd2bbf0070ddea8'; File = 'mpv.exe'; Destination = 'src-tauri/binaries/mpv-x86_64-pc-windows-msvc.exe' }
+          )
+          foreach ($archive in $archives) {
+            $path = Join-Path $env:RUNNER_TEMP $archive.Name
+            curl.exe --fail --location --retry 3 --retry-all-errors "https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/$release/$($archive.Name)" -o $path
+            if ($LASTEXITCODE -ne 0) { throw 'mpv download failed' }
+            if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $archive.SHA256) { throw 'mpv checksum mismatch' }
+            $destination = Join-Path $env:RUNNER_TEMP ($archive.Name + '.extracted')
+            7z x -y $path "-o$destination" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'mpv extraction failed' }
+            $file = @(Get-ChildItem -LiteralPath $destination -Recurse -Filter $archive.File)
+            if ($file.Count -ne 1) { throw "Expected one $($archive.File)" }
+            Copy-Item -LiteralPath $file[0].FullName -Destination $archive.Destination -Force
+          }
+
       - name: Build app without installers
+        if: '!inputs.windows_installer'
         run: pnpm tauri build --no-bundle
+
+      - name: Build Windows installer
+        if: inputs.windows_installer && matrix.platform.name == 'Windows'
+        env:
+          HARBOR_CHANNEL: stable
+        run: pnpm tauri build --bundles nsis
+
+      - name: Build Linux system binary
+        if: inputs.windows_installer && matrix.platform.name == 'Linux'
+        env:
+          HARBOR_CHANNEL: stable
+        run: pnpm tauri:build:linux-system --bundles deb
+
+      - name: Upload Windows installer
+        if: inputs.windows_installer && matrix.platform.name == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Harbor-stable-Windows-x64-setup
+          path: src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 30
