@@ -52,6 +52,7 @@ function fixture(options = {}) {
     Headers,
     Response,
     Error,
+    URL,
     JSON,
     Promise,
     Map,
@@ -88,7 +89,11 @@ function fixture(options = {}) {
       HARBOR_SOCIAL_ENABLED: options.servicesEnabled !== false,
     },
     "@/lib/config/owned-services": {
-      serviceNotConfiguredError: (service) => Object.assign(new Error(`Harbor ${service} service is not configured.`), { status: 503, code: "service_not_configured" }),
+      serviceNotConfiguredError: (service) =>
+        Object.assign(new Error(`Harbor ${service} service is not configured.`), {
+          status: 503,
+          code: "service_not_configured",
+        }),
     },
     "@/lib/safe-fetch": { safeFetch: transport },
   };

@@ -30,7 +30,9 @@ if (process.platform !== "win32" && !process.env.HARBOR_LIBMPV_FORCE) {
 }
 
 if (process.platform === "win32" && process.arch !== "x64") {
-  throw new Error(`[libmpv] the pinned Windows DLL is x64; unsupported architecture: ${process.arch}`);
+  throw new Error(
+    `[libmpv] the pinned Windows DLL is x64; unsupported architecture: ${process.arch}`,
+  );
 }
 
 function findFile(dir, name) {

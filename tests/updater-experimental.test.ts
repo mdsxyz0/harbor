@@ -23,8 +23,10 @@ function load<T>(
   mocks: Record<string, unknown>,
   globals: Record<string, unknown>,
 ): T {
-  const source = readFileSync(new URL(`../${path}`, import.meta.url), "utf8")
-    .replaceAll("import.meta.env.DEV", String(globals.__DEV__ === true));
+  const source = readFileSync(new URL(`../${path}`, import.meta.url), "utf8").replaceAll(
+    "import.meta.env.DEV",
+    String(globals.__DEV__ === true),
+  );
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
   });
@@ -157,7 +159,14 @@ function deferred<T>() {
 }
 
 function harness(
-  options: { beta?: boolean; managed?: boolean; platform?: string; version?: string; dev?: boolean; updatesEnabled?: boolean } = {},
+  options: {
+    beta?: boolean;
+    managed?: boolean;
+    platform?: string;
+    version?: string;
+    dev?: boolean;
+    updatesEnabled?: boolean;
+  } = {},
 ) {
   const localStorage = storage();
   localStorage.setItem("harbor.settings", JSON.stringify({ betaUpdates: !!options.beta }));
@@ -376,7 +385,9 @@ test("unconfigured owned updates perform no checks or installation and offer our
   assert.equal(h.calls.install, 0);
   assert.equal(h.calls.launch, 0);
   await h.updater.openManualDownload();
-  assert.deepEqual(h.calls.manualUrls, ["https://github.com/mdsxyz0/harbor/actions/workflows/app-build.yml"]);
+  assert.deepEqual(h.calls.manualUrls, [
+    "https://github.com/mdsxyz0/harbor/actions/workflows/app-build.yml",
+  ]);
 });
 
 test("development builds leave installed-release update and recovery state untouched", async () => {
@@ -390,11 +401,14 @@ test("development builds leave installed-release update and recovery state untou
     await h.updater.prepareBetaReturn("0.9.122");
     await h.updater.downloadUpdate();
     await h.updater.installUpdate();
-    await new Promise(resolve => setImmediate(resolve));
+    await new Promise((resolve) => setImmediate(resolve));
     assert.deepEqual(h.calls.headers, []);
     assert.deepEqual(h.calls.fetchUrls, []);
     assert.deepEqual(h.calls.nativeFetchUrls, []);
-    assert.equal(h.calls.download + h.calls.install + h.calls.stage + h.calls.launch + h.calls.relaunch, 0);
+    assert.equal(
+      h.calls.download + h.calls.install + h.calls.stage + h.calls.launch + h.calls.relaunch,
+      0,
+    );
     assert.equal(h.updater.useUpdate().status, "idle");
     assert.equal(h.localStorage.getItem("harbor.update.pending"), pending);
   }
@@ -419,6 +433,13 @@ test("account requests use native-aware transport and retry with the refreshed t
       HARBOR_ACCOUNT_ENABLED: true,
       HARBOR_THEMES_ENABLED: true,
       HARBOR_SOCIAL_ENABLED: true,
+    },
+    "@/lib/config/owned-services": {
+      serviceNotConfiguredError: (service: string) =>
+        Object.assign(new Error(`Harbor ${service} service is not configured.`), {
+          status: 503,
+          code: "service_not_configured",
+        }),
     },
     "@/lib/safe-fetch": {
       safeFetch: async (url: string, options: { headers: unknown; signal: unknown }) => {
@@ -759,7 +780,11 @@ test("missing native platform opens the download site instead of another archite
   for (const platform of ["darwin-x86_64", "windows-aarch64", "linux-x86_64"]) {
     const h = harness({ beta: true, platform });
     await h.updater.openManualDownload();
-    assert.deepEqual(h.calls.manualUrls, ["https://example.test"], platform);
+    assert.deepEqual(
+      h.calls.manualUrls,
+      ["https://github.com/mdsxyz0/harbor/actions/workflows/app-build.yml"],
+      platform,
+    );
   }
 });
 
@@ -781,7 +806,11 @@ test("unknown device and failed manifest do not choose an installer", async () =
     if (failure === "device") h.config.probeMissing = true;
     else h.config.status = 503;
     await h.updater.openManualDownload();
-    assert.deepEqual(h.calls.manualUrls, ["https://example.test"], failure);
+    assert.deepEqual(
+      h.calls.manualUrls,
+      ["https://github.com/mdsxyz0/harbor/actions/workflows/app-build.yml"],
+      failure,
+    );
   }
 });
 

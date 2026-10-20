@@ -9,7 +9,10 @@ describe("owned service URL configuration", () => {
       resolveServiceBase(" https://api.example.test/v2/ ", "https://owned.test"),
       "https://api.example.test/v2",
     );
-    assert.equal(resolveServiceBase("http://localhost:8080/", "https://owned.test"), "http://localhost:8080");
+    assert.equal(
+      resolveServiceBase("http://localhost:8080/", "https://owned.test"),
+      "http://localhost:8080",
+    );
   });
 
   it("rejects unsafe or malformed custom endpoint values", () => {

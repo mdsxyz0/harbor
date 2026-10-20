@@ -37,12 +37,7 @@ if (!spec) {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const targetArch = process.arch === "arm64" ? "aarch64" : "x86_64";
-const destination = join(
-  root,
-  "src-tauri",
-  "binaries",
-  `mpv-${targetArch}-pc-windows-msvc.exe`,
-);
+const destination = join(root, "src-tauri", "binaries", `mpv-${targetArch}-pc-windows-msvc.exe`);
 
 function findFile(dir, name) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -63,12 +58,14 @@ const temp = mkdtempSync(join(tmpdir(), "harbor-mpv-"));
 try {
   console.log(`[mpv] fetching ${url}`);
   const response = await fetch(url, { redirect: "follow" });
-  if (!response.ok) throw new Error(`[mpv] download failed (${response.status} ${response.statusText})`);
+  if (!response.ok)
+    throw new Error(`[mpv] download failed (${response.status} ${response.statusText})`);
 
   const archive = join(temp, spec.asset);
   const bytes = Buffer.from(await response.arrayBuffer());
   const digest = createHash("sha256").update(bytes).digest("hex");
-  if (digest !== spec.sha256) throw new Error(`[mpv] checksum mismatch (expected ${spec.sha256}, got ${digest})`);
+  if (digest !== spec.sha256)
+    throw new Error(`[mpv] checksum mismatch (expected ${spec.sha256}, got ${digest})`);
   writeFileSync(archive, bytes);
 
   const extracted = join(temp, "extracted");
