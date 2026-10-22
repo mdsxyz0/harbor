@@ -138,10 +138,6 @@ jobs:
     name: Windows x64 NSIS installer
     runs-on: windows-latest
     timeout-minutes: 120
-    # This beta workflow deliberately allows a build without the missing extension layer.
-    # capstan-stage.mjs reports that extension support is disabled; no capability is claimed.
-    env:
-      HARBOR_CAPSTAN_OPTIONAL: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -188,8 +184,17 @@ jobs:
             throw "NSIS (makensis.exe) is unavailable on this runner."
           }
 
-      - name: Prepare Windows build assets (Capstan optional)
+      - name: Set up Capstan JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Prepare Windows build assets
         run: pnpm run setup
+
+      - name: Verify bundled Capstan runtime
+        run: node scripts/capstan-verify.mjs
 
       - name: Build Windows x64 NSIS installer
         run: pnpm tauri build --target x86_64-pc-windows-msvc --bundles nsis
@@ -206,10 +211,6 @@ jobs:
     name: Linux system packages
     runs-on: ubuntu-22.04
     timeout-minutes: 120
-    # This beta workflow deliberately allows a build without the missing extension layer.
-    # capstan-stage.mjs reports that extension support is disabled; no capability is claimed.
-    env:
-      HARBOR_CAPSTAN_OPTIONAL: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -262,8 +263,17 @@ jobs:
       - name: Build Pokémon engine and source bundle
         run: node tools/pokemon-engine/build.mjs --fetch-source "${{ runner.temp }}/harbor-pokemon-source" --output src-tauri/resources/pokemon-engine --artifacts "${{ runner.temp }}/harbor-pokemon-build"
 
-      - name: Prepare Linux build assets (Capstan optional)
+      - name: Set up Capstan JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Prepare Linux build assets
         run: pnpm run setup
+
+      - name: Verify bundled Capstan runtime
+        run: node scripts/capstan-verify.mjs
 
       - name: Build full Linux system package
         run: pnpm tauri:build:linux-system

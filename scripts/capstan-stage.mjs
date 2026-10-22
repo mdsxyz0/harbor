@@ -397,16 +397,6 @@ async function withoutSources() {
   );
 }
 
-function withoutDependencies(gaps) {
-  rmSync(dest, { recursive: true, force: true });
-  mkdirSync(dest, { recursive: true });
-  keepStageMarker();
-  warn(
-    "BUILDING WITHOUT EXTENSION SUPPORT. HARBOR_CAPSTAN_OPTIONAL is set, but required",
-    `Capstan dependency paths are missing (${gaps.map(([label]) => label).join(", ")}); skipping dependency downloads and staging.`,
-  );
-}
-
 // libs/ and tools/dex-tools/ are gitignored, so a checkout with the layer can still be
 // missing everything it compiles against. deps.sh is the documented fresh-clone step;
 // stage mode runs it here so a build runner needs no human in front of it.
@@ -446,10 +436,6 @@ async function main() {
   if (gaps.length) {
     if (mode === "check") {
       die(`missing ${gaps.map(([label]) => label).join(" and ")} at ${src}`, "Run: pnpm run setup:capstan");
-    }
-    if (optional) {
-      withoutDependencies(gaps);
-      return;
     }
     fetchLayerDeps();
     for (const [label, path] of gaps) {

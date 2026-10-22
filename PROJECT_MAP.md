@@ -8,7 +8,7 @@ Tauri 2, Rust, React, TypeScript 5.8 and Vite 7; pnpm is locked by the repositor
 
 - B1: Startup resolves owned service URLs from `src/lib/config/owned-services.json`. Retired harbor.site destinations are rejected, including saved public relay/sync settings. Custom server settings and stored sessions are preserved. Acceptance: configuration, session and destination checks in hosted Actions.
 - B2: Unavailable account, OAuth exchange, public relay, model and update services stop before credential transfer or installation. Settings provide a manual GitHub build link. Existing model files remain usable. Acceptance: regression tests, typecheck and native checks.
-- B3: GitHub-hosted Windows and Linux jobs prepare dependencies and build installable artifacts from the beta revision. The missing Capstan extension is explicitly optional and unavailable in these builds. Acceptance: successful NSIS and full Linux package jobs for the changed source.
+- B3: GitHub-hosted Windows and Linux jobs prepare dependencies and build installable artifacts from the beta revision. Capstan is required: the pinned nanojson dependency comes directly from TeamNewPipe on JitPack, retaining checksum verification. Both platforms verify the staged bridge before packaging. Acceptance: successful native bridge ping, NSIS and full Linux package jobs for the changed source.
 
 ## [ARCHITECTURE]
 
@@ -22,7 +22,8 @@ Tauri 2, Rust, React, TypeScript 5.8 and Vite 7; pnpm is locked by the repositor
 ## [ORPHANS & PENDING]
 
 - First hosted run: https://github.com/mdsxyz0/harbor/actions/runs/39472327213, source `dda464d34fa13824fe818c4217c725afb896f2cd`. Ubuntu passed changed-code checks, retired-destination checks, typecheck and Cargo check. Targeted tests: 73 passed, 4 failed in test fixtures/changed manual-download expectations; formatting also failed. Corrections await a fresh hosted run. No local builds or tests were run.
-- Windows and Linux preparation both stopped at Capstan's deleted nanojson dependency (404). Optional staging now exits explicitly without extension support before downloading missing dependencies; verification and full installer/package outputs remain pending.
+- Run https://github.com/mdsxyz0/harbor/actions/runs/39474211580 verified quality checks and the Windows installer at source `206ab030`; that Windows build omitted Capstan. Linux did not complete successfully. This is baseline evidence, not verification of the Capstan repair.
+- Capstan repair: dependency URL now targets the original TeamNewPipe artifact, not a Harbor continuation or application backend. Build jobs require Java 17 and a successful bundled bridge check. Previous dependency-skipping workaround removed. Checks, full builds and runtime verification are pending a fresh hosted run.
 - Cloudflare foundation at `harbor-services.xyz7.workers.dev` provides health/config only. Accounts, social features, OAuth exchange, media assets, models, profile sync and relay backends are not implemented. Their capabilities remain disabled; moving a URL does not restore a backend.
 - Automatic updates need a fork-owned signing key, feed and matching verified artifacts. No release, signing secret or updater rollout is part of this pass.
 - Native installed Windows playback and visual UI acceptance are not verified by compilation. Keep runtime acceptance separate from CI results.
